@@ -38,6 +38,7 @@
         "LASTEXITCODE",
         "nosec",
         "rsrc",
+        "softprops",
         "syso",
         "systray",
         "Timout",

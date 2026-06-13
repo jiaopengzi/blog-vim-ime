@@ -4,30 +4,50 @@
 # Copyright   : Copyright (c) 2026 by jiaopengzi, All Rights Reserved.
 # Description : Windows PowerShell build and run script for blog-vim-ime
 
+param(
+    [ValidateRange(0, 7)]
+    [int]$Choice = -1
+)
+
 # Define executable names
 $BINARY_SERVICE = "blog-vim-ime"
 $BINARY_CLI = "blog-vim-ime-cli"
 $OUTPUT_DIR = ".\bin"
 $ICON_FILE = ".\app.ico"
 
-# Display menu
-Write-Host ""
-Write-Host "blog-vim-ime - Windows Build Script" -ForegroundColor Cyan
-Write-Host ""
-Write-Host "Choose an operation:"
-Write-Host "  0 - Format code (go fmt)"
-Write-Host "  1 - Lint check (golangci-lint)"
-Write-Host "  2 - Run tests (go test)"
-Write-Host "  3 - Build with icon"
-Write-Host "  4 - Build and run"
-Write-Host "  5 - Run compiled EXE"
-Write-Host "  6 - Clean build artifacts"
-Write-Host "  7 - Full pipeline (Fmt -> Lint -> Test -> Build)"
-Write-Host ""
+# SelectOperation 返回本次脚本执行的菜单选项.
+# choice 为可选的非交互输入, 当为 -1 时回退到交互式选择.
+# 返回值 int, 表示后续 switch 使用的菜单编号.
+function SelectOperation {
+    param(
+        [int]$Choice
+    )
 
-# Get user choice
-$choice = Read-Host "Enter your choice"
-Write-Host ""
+    if ($Choice -ge 0) {
+        return $Choice
+    }
+
+    Write-Host ""
+    Write-Host "blog-vim-ime - Windows Build Script" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "Choose an operation:"
+    Write-Host "  0 - Format code (go fmt)"
+    Write-Host "  1 - Lint check (golangci-lint)"
+    Write-Host "  2 - Run tests (go test)"
+    Write-Host "  3 - Build with icon"
+    Write-Host "  4 - Build and run"
+    Write-Host "  5 - Run compiled EXE"
+    Write-Host "  6 - Clean build artifacts"
+    Write-Host "  7 - Full pipeline (Fmt -> Lint -> Test -> Build)"
+    Write-Host ""
+
+    $selected = Read-Host "Enter your choice"
+    Write-Host ""
+
+    return [int]$selected
+}
+
+$choice = SelectOperation -Choice $Choice
 
 # Format code
 function formatCode {
