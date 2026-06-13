@@ -136,7 +136,7 @@ func TestSwitcherExecutePropagatesControllerError(t *testing.T) {
 	}
 }
 
-func TestSwitcherExecuteNormalToVisualSwitchChinese(t *testing.T) {
+func TestSwitcherExecuteNormalToVisualSwitchEnglish(t *testing.T) {
 	t.Parallel()
 
 	mock := &mockController{}
@@ -154,8 +154,8 @@ func TestSwitcherExecuteNormalToVisualSwitchChinese(t *testing.T) {
 		t.Fatalf("expected changed=true")
 	}
 
-	if mock.calls != 1 || !mock.lastOpen {
-		t.Fatalf("expected one chinese switch call")
+	if mock.calls != 1 || mock.lastOpen {
+		t.Fatalf("expected one english switch call")
 	}
 }
 
@@ -168,6 +168,29 @@ func TestSwitcherExecuteVisualToNormalSwitchEnglish(t *testing.T) {
 	result, err := switcher.Execute(context.Background(), SwitchRequest{
 		ModeBefore: ModeVisual,
 		ModeAfter:  ModeNormal,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !result.Changed {
+		t.Fatalf("expected changed=true")
+	}
+
+	if mock.calls != 1 || mock.lastOpen {
+		t.Fatalf("expected one english switch call")
+	}
+}
+
+func TestSwitcherExecuteInsertToVisualSwitchEnglish(t *testing.T) {
+	t.Parallel()
+
+	mock := &mockController{}
+	switcher := NewSwitcher(mock)
+
+	result, err := switcher.Execute(context.Background(), SwitchRequest{
+		ModeBefore: ModeInsert,
+		ModeAfter:  ModeVisual,
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

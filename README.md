@@ -148,8 +148,9 @@ Content-Type: application/json
 切换规则：
 
 1. 进入 `normal` 模式：切到英文输入法（兜底）。
-2. 离开 `normal` 模式（进入其他模式）：切到中文输入法。
-3. 在同一模式内转换：不做输入法切换（返回 204）。
+2. 进入 `visual` 模式：切到英文输入法。
+3. 进入 `insert`, `replace`, `cmd` 模式：切到中文输入法。
+4. 在同一模式内转换：不做输入法切换（返回 204）。
 
 ## 运行测试
 
@@ -179,7 +180,7 @@ go run .\cmd\blog-vim-ime-cli --mode-before insert --mode-after normal
 go run .\cmd\blog-vim-ime-cli --mode-before normal --mode-after insert
 ```
 
-切到中文输入法（normal -> visual）:
+切到英文输入法（normal -> visual）:
 
 ```powershell
 go run .\cmd\blog-vim-ime-cli --mode-before normal --mode-after visual

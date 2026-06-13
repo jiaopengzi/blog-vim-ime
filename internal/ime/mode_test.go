@@ -20,7 +20,7 @@ func TestDetermineAction(t *testing.T) {
 		wantAction TransitionAction
 		wantErr    bool
 	}{
-		// normal -> any mode: switch to chinese
+		// normal -> insert/replace/cmd: switch to chinese
 		{
 			name:       "normal to insert switches chinese",
 			before:     ModeNormal,
@@ -28,10 +28,10 @@ func TestDetermineAction(t *testing.T) {
 			wantAction: ActionSwitchToChinese,
 		},
 		{
-			name:       "normal to visual switches chinese",
+			name:       "normal to visual switches english",
 			before:     ModeNormal,
 			after:      ModeVisual,
-			wantAction: ActionSwitchToChinese,
+			wantAction: ActionSwitchToEnglish,
 		},
 		{
 			name:       "normal to replace switches chinese",
@@ -89,12 +89,12 @@ func TestDetermineAction(t *testing.T) {
 			after:      ModeVisual,
 			wantAction: ActionNone,
 		},
-		// non-normal to non-normal: switch to chinese
+		// visual 目标模式使用英文; 其余非 normal 目标模式默认使用中文.
 		{
-			name:       "insert to visual switches chinese",
+			name:       "insert to visual switches english",
 			before:     ModeInsert,
 			after:      ModeVisual,
-			wantAction: ActionSwitchToChinese,
+			wantAction: ActionSwitchToEnglish,
 		},
 		{
 			name:       "visual to replace switches chinese",

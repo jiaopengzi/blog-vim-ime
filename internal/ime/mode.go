@@ -28,7 +28,7 @@ const (
 
 // DetermineAction 根据模式变化计算需要执行的输入法动作.
 // modeBefore 和 modeAfter 支持 normal, insert, visual, replace, cmd 等模式.
-// 切换规则: normal 模式使用英文输入法; 其他模式使用中文输入法.
+// 切换规则: normal 和 visual 模式使用英文输入法; insert, replace, cmd 模式使用中文输入法.
 // 返回动作枚举; 当模式值不受支持时返回错误.
 func DetermineAction(modeBefore, modeAfter string) (TransitionAction, error) {
 	if !isSupportedMode(modeBefore) {
@@ -43,12 +43,24 @@ func DetermineAction(modeBefore, modeAfter string) (TransitionAction, error) {
 		return ActionNone, nil
 	}
 
-	// normal 模式下切换到英文; 其他模式下切换到中文.
-	if modeAfter == ModeNormal {
+	// normal 和 visual 模式下切换到英文; 其余模式下切换到中文.
+	if usesEnglishIME(modeAfter) {
 		return ActionSwitchToEnglish, nil
 	}
 
 	return ActionSwitchToChinese, nil
+}
+
+// usesEnglishIME 判断目标模式是否应保持英文输入法.
+// mode 表示目标 Vim 模式.
+// 返回 true 表示应切换到英文, false 表示应切换到中文.
+func usesEnglishIME(mode string) bool {
+	switch mode {
+	case ModeNormal, ModeVisual:
+		return true
+	default:
+		return false
+	}
 }
 
 // isSupportedMode 判断模式是否在允许集合内.
