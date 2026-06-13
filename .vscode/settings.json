@@ -29,5 +29,19 @@
         "statusBar.debuggingForeground": "#FEFBFF",
         "statusBar.noFolderBackground": "#410A56",
         "statusBar.noFolderForeground": "#FEFBFF"
-    }
+    },
+    "cSpell.words": [
+        "akavel",
+        "getlantern",
+        "golangci",
+        "gosec",
+        "LASTEXITCODE",
+        "nosec",
+        "rsrc",
+        "syso",
+        "systray",
+        "Timout",
+        "trayassets",
+        "ufeff"
+    ]
 }
