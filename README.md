@@ -79,6 +79,8 @@ go run .\cmd\blog-vim-ime
 # 选择 5（编译运行服务）
 ```
 
+服务启动时会优先读取 EXE 同目录下的 `port.yaml`; 如果同目录不存在, 再回退到当前工作目录中的同名文件.
+
 #### 添加应用程序图标
 
 项目根目录包含：
@@ -90,7 +92,8 @@ go run .\cmd\blog-vim-ime
 
 1. 从项目根目录读取 `app.ico`
 2. 通过 rsrc 工具将 `app.ico` 嵌入到 EXE 文件
-3. 在运行时从嵌入数据中加载托盘图标
+3. 复制 `port.yaml` 到 `bin` 目录, 便于直接运行构建产物
+4. 在运行时从嵌入数据中加载托盘图标
 
 运行脚本选择含图标构建：
 
@@ -104,6 +107,7 @@ go run .\cmd\blog-vim-ime
 ```powershell
 go build -o .\bin\blog-vim-ime.exe .\cmd\blog-vim-ime
 go build -o .\bin\blog-vim-ime-cli.exe .\cmd\blog-vim-ime-cli
+Copy-Item .\port.yaml .\bin\port.yaml -Force
 ```
 
 ## Lint 校验

@@ -11,6 +11,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -20,6 +21,8 @@ const (
 	maxPort = 65535
 )
 
+var executablePathFunc = os.Executable
+
 // LoadPort 从指定 YAML 文件读取端口配置.
 // path 表示配置文件路径, defaultPort 表示文件不存在时使用的默认端口.
 // 返回值为最终端口; 当文件读取失败或端口格式非法时返回错误.
@@ -28,22 +31,53 @@ func LoadPort(path string, defaultPort int) (int, error) {
 		return 0, fmt.Errorf("default port %d out of range", defaultPort)
 	}
 
+	resolvedPath, err := resolvePortConfigPath(path)
+	if err != nil {
+		return 0, err
+	}
+
 	// #nosec G304 -- path 由主程序固定传入本地 port.yaml, 不接受远程输入.
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(resolvedPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return defaultPort, nil
 		}
 
-		return 0, fmt.Errorf("read %s: %w", path, err)
+		return 0, fmt.Errorf("read %s: %w", resolvedPath, err)
 	}
 
 	port, err := parsePortYAML(string(data))
 	if err != nil {
-		return 0, fmt.Errorf("parse %s: %w", path, err)
+		return 0, fmt.Errorf("parse %s: %w", resolvedPath, err)
 	}
 
 	return port, nil
+}
+
+// resolvePortConfigPath 解析端口配置文件的实际读取路径.
+// path 表示调用方传入的配置路径.
+// 返回值 string, 优先命中的配置文件路径; error, 当解析可执行文件路径失败时为非 nil.
+func resolvePortConfigPath(path string) (string, error) {
+	if filepath.IsAbs(path) {
+		return path, nil
+	}
+
+	executablePath, err := executablePathFunc()
+	if err != nil {
+		return "", fmt.Errorf("resolve executable path: %w", err)
+	}
+
+	configNearExecutable := filepath.Join(filepath.Dir(executablePath), path)
+	_, statErr := os.Stat(configNearExecutable)
+	if statErr == nil {
+		return configNearExecutable, nil
+	}
+
+	if !os.IsNotExist(statErr) {
+		return "", fmt.Errorf("stat %s: %w", configNearExecutable, statErr)
+	}
+
+	return path, nil
 }
 
 // parsePortYAML 解析 YAML 文本中的 port 字段.

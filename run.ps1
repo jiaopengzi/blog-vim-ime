@@ -88,9 +88,13 @@ function buildWithIcon {
         Write-Host "rsrc installed successfully" -ForegroundColor Green
     }
 
-    # 检查项目根目录的 app.ico
+    # 检查项目根目录的 app.ico 和运行期配置.
     if (-not (Test-Path "app.ico")) {
         Write-Host "Error: app.ico not found in project root" -ForegroundColor Red
+        return
+    }
+    if (-not (Test-Path "port.yaml")) {
+        Write-Host "Error: port.yaml not found in project root" -ForegroundColor Red
         return
     }
 
@@ -144,10 +148,14 @@ function buildWithIcon {
         return
     }
 
+    # 复制运行期配置到输出目录, 便于直接从 bin 目录启动.
+    Copy-Item -Path "port.yaml" -Destination "$OUTPUT_DIR\port.yaml" -Force
+
     Write-Host "Build complete with icon" -ForegroundColor Green
     Write-Host "Output:"
     Write-Host "  - $OUTPUT_DIR\$BINARY_SERVICE.exe"
     Write-Host "  - $OUTPUT_DIR\$BINARY_CLI.exe"
+    Write-Host "  - $OUTPUT_DIR\port.yaml"
 }
 
 # Build and run
