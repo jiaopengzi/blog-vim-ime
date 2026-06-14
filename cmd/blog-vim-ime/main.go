@@ -22,6 +22,7 @@ import (
 	"time"
 
 	trayassets "blog-vim-ime"
+	"blog-vim-ime/internal/autostart"
 	"blog-vim-ime/internal/config"
 	"blog-vim-ime/internal/ime"
 	"blog-vim-ime/internal/server"
@@ -73,6 +74,36 @@ func loadTrayIcon() []byte {
 	return trayassets.DefaultTrayIcon()
 }
 
+// setupAutoStart 在系统托盘中创建开机启动复选框.
+// logger 用于记录注册表操作失败日志.
+// 复选框初始状态从注册表读取; 点击时即时写入或删除注册表键值.
+func setupAutoStart(logger *log.Logger) {
+	autoStartOn, err := autostart.IsEnabled()
+	if err != nil {
+		logger.Printf("read autostart status failed: %v", err)
+	}
+
+	mAutoStart := systray.AddMenuItemCheckbox("开机启动", "开机自动启动", autoStartOn)
+
+	go func() {
+		for range mAutoStart.ClickedCh {
+			if mAutoStart.Checked() {
+				mAutoStart.Uncheck()
+				if err := autostart.Disable(); err != nil {
+					logger.Printf("disable autostart failed: %v", err)
+					mAutoStart.Check()
+				}
+			} else {
+				mAutoStart.Check()
+				if err := autostart.Enable(); err != nil {
+					logger.Printf("enable autostart failed: %v", err)
+					mAutoStart.Uncheck()
+				}
+			}
+		}
+	}()
+}
+
 // main 启动本地 IME 服务并在系统托盘显示.
 // 无参数.
 // 当配置读取失败或服务异常退出时直接终止进程.
@@ -119,6 +150,8 @@ func main() {
 			if iconData := loadTrayIcon(); len(iconData) > 0 {
 				systray.SetIcon(iconData)
 			}
+
+			setupAutoStart(logger)
 
 			// 创建退出菜单项
 			mQuit := systray.AddMenuItem("退出", "退出程序")
