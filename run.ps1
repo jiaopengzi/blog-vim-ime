@@ -5,7 +5,7 @@
 # Description : Windows PowerShell build and run script for blog-vim-ime
 
 param(
-    [ValidateRange(0, 7)]
+    [ValidateRange(0, 8)]
     [int]$Choice = -1
 )
 
@@ -34,11 +34,12 @@ function SelectOperation {
     Write-Host "  0 - Format code (go fmt)"
     Write-Host "  1 - Lint check (golangci-lint)"
     Write-Host "  2 - Run tests (go test)"
-    Write-Host "  3 - Build with icon"
-    Write-Host "  4 - Build and run"
-    Write-Host "  5 - Run compiled EXE"
-    Write-Host "  6 - Clean build artifacts"
-    Write-Host "  7 - Full pipeline (Fmt -> Lint -> Test -> Build)"
+    Write-Host "  3 - Build service (blog-vim-ime.exe)"
+    Write-Host "  4 - Build CLI (blog-vim-ime-cli.exe)"
+    Write-Host "  5 - Build service and run"
+    Write-Host "  6 - Run compiled service EXE"
+    Write-Host "  7 - Full pipeline (Fmt -> Lint -> Test -> Build service)"
+    Write-Host "  8 - Clean build artifacts"
     Write-Host ""
 
     $selected = Read-Host "Enter your choice"
@@ -78,15 +79,10 @@ function runTests {
     }
 }
 
-# Build with icon
-function buildWithIcon {
-    Write-Host "Building with icon..." -ForegroundColor Yellow
-    
-    if (-not (Test-Path $OUTPUT_DIR)) {
-        New-Item -ItemType Directory -Path $OUTPUT_DIR | Out-Null
-    }
-
-    # Check rsrc availability and install if needed
+# Ensure-Rsrc 确保 rsrc 工具可用, 不可用时尝试安装.
+# 无参数.
+# 无返回值; 安装失败时直接 return 中断调用方.
+function Ensure-Rsrc {
     $rsrcAvailable = $false
     try {
         $rsrcOutput = rsrc -h 2>&1
@@ -103,86 +99,105 @@ function buildWithIcon {
         go get github.com/akavel/rsrc
         if ($LASTEXITCODE -ne 0) {
             Write-Host "Error: Failed to install rsrc tool" -ForegroundColor Red
-            return
+            return $false
         }
         Write-Host "rsrc installed successfully" -ForegroundColor Green
     }
+    return $true
+}
 
-    # 检查项目根目录的 app.ico 和运行期配置.
+# Prepare-BuildDir 确保输出目录和必要资源文件就绪.
+# 无参数.
+# 当 app.ico 或 port.yaml 缺失时直接 return 中断调用方.
+function Prepare-BuildDir {
+    if (-not (Test-Path $OUTPUT_DIR)) {
+        New-Item -ItemType Directory -Path $OUTPUT_DIR | Out-Null
+    }
+
     if (-not (Test-Path "app.ico")) {
         Write-Host "Error: app.ico not found in project root" -ForegroundColor Red
-        return
+        return $false
     }
     if (-not (Test-Path "port.yaml")) {
         Write-Host "Error: port.yaml not found in project root" -ForegroundColor Red
-        return
+        return $false
     }
 
-    # 清理旧版本遗留的 cmd 目录图标资源, 保持项目内仅保留根目录资源文件.
+    # 清理旧版本遗留的 cmd 目录图标资源.
     Remove-Item -Force "cmd\blog-vim-ime\app.png" -ErrorAction SilentlyContinue
     Remove-Item -Force "cmd\blog-vim-ime-cli\app.png" -ErrorAction SilentlyContinue
 
-    # Build service with icon
-    Write-Host "Building service with icon..." -ForegroundColor Cyan
-    Push-Location .\cmd\blog-vim-ime
-    
-    Write-Host "Generating icon resource..." -ForegroundColor Cyan
-    rsrc -ico "../../app.ico" -o rsrc.syso
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Error: Icon generation failed for service" -ForegroundColor Red
-        Remove-Item -Force rsrc.syso -ErrorAction SilentlyContinue
-        Pop-Location
-        return
-    }
-    
-    go build -o "..\..\$OUTPUT_DIR\$BINARY_SERVICE.exe"
-    $buildStatus = $LASTEXITCODE
-    Remove-Item -Force rsrc.syso -ErrorAction SilentlyContinue
-    Pop-Location
-    
-    if ($buildStatus -ne 0) {
-        Write-Host "Error: Service build failed" -ForegroundColor Red
-        return
-    }
-
-    # Build CLI with icon
-    Write-Host "Building CLI with icon..." -ForegroundColor Cyan
-    Push-Location .\cmd\blog-vim-ime-cli
-    
-    Write-Host "Generating icon resource..." -ForegroundColor Cyan
-    rsrc -ico "../../app.ico" -o rsrc.syso
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Error: Icon generation failed for CLI" -ForegroundColor Red
-        Remove-Item -Force rsrc.syso -ErrorAction SilentlyContinue
-        Pop-Location
-        return
-    }
-    
-    go build -o "..\..\$OUTPUT_DIR\$BINARY_CLI.exe"
-    $buildStatus = $LASTEXITCODE
-    Remove-Item -Force rsrc.syso -ErrorAction SilentlyContinue
-    Pop-Location
-    
-    if ($buildStatus -ne 0) {
-        Write-Host "Error: CLI build failed" -ForegroundColor Red
-        return
-    }
-
-    # 复制运行期配置到输出目录, 便于直接从 bin 目录启动.
-    Copy-Item -Path "port.yaml" -Destination "$OUTPUT_DIR\port.yaml" -Force
-
-    Write-Host "Build complete with icon" -ForegroundColor Green
-    Write-Host "Output:"
-    Write-Host "  - $OUTPUT_DIR\$BINARY_SERVICE.exe"
-    Write-Host "  - $OUTPUT_DIR\$BINARY_CLI.exe"
-    Write-Host "  - $OUTPUT_DIR\port.yaml"
+    return $true
 }
 
-# Build and run
+# Build-Single 编译单个 Go 入口目录并嵌入图标.
+# CmdDir 为 cmd 子目录名 (如 blog-vim-ime), BinaryName 为输出 EXE 名称.
+# 编译失败时直接 return.
+function Build-Single {
+    param(
+        [string]$CmdDir,
+        [string]$BinaryName
+    )
+
+    Push-Location ".\cmd\$CmdDir"
+
+    Write-Host "Generating icon resource..." -ForegroundColor Cyan
+    rsrc -ico "../../app.ico" -o rsrc.syso
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Error: Icon generation failed for $CmdDir" -ForegroundColor Red
+        Remove-Item -Force rsrc.syso -ErrorAction SilentlyContinue
+        Pop-Location
+        return $false
+    }
+
+    go build -o "..\..\$OUTPUT_DIR\$BinaryName.exe"
+    $buildStatus = $LASTEXITCODE
+    Remove-Item -Force rsrc.syso -ErrorAction SilentlyContinue
+    Pop-Location
+
+    if ($buildStatus -ne 0) {
+        Write-Host "Error: Build failed for $CmdDir" -ForegroundColor Red
+        return $false
+    }
+
+    return $true
+}
+
+# Build service (blog-vim-ime.exe)
+function buildService {
+    Write-Host "Building service (blog-vim-ime.exe)..." -ForegroundColor Yellow
+
+    if (-not (Ensure-Rsrc)) { return }
+    if (-not (Prepare-BuildDir)) { return }
+
+    if (-not (Build-Single -CmdDir "blog-vim-ime" -BinaryName $BINARY_SERVICE)) { return }
+
+    # 复制运行期配置到输出目录.
+    Copy-Item -Path "port.yaml" -Destination "$OUTPUT_DIR\port.yaml" -Force
+
+    Write-Host "Service build complete" -ForegroundColor Green
+    Write-Host "Output: $OUTPUT_DIR\$BINARY_SERVICE.exe"
+    Write-Host "        $OUTPUT_DIR\port.yaml"
+}
+
+# Build CLI (blog-vim-ime-cli.exe)
+function buildCLI {
+    Write-Host "Building CLI (blog-vim-ime-cli.exe)..." -ForegroundColor Yellow
+
+    if (-not (Ensure-Rsrc)) { return }
+    if (-not (Prepare-BuildDir)) { return }
+
+    if (-not (Build-Single -CmdDir "blog-vim-ime-cli" -BinaryName $BINARY_CLI)) { return }
+
+    Write-Host "CLI build complete" -ForegroundColor Green
+    Write-Host "Output: $OUTPUT_DIR\$BINARY_CLI.exe"
+}
+
+# Build service and run
 function buildAndRun {
     Write-Host "Building and running..." -ForegroundColor Yellow
-    buildWithIcon
-    
+    buildService
+
     if ($LASTEXITCODE -eq 0) {
         Write-Host ""
         Write-Host "Starting service..." -ForegroundColor Cyan
@@ -193,10 +208,10 @@ function buildAndRun {
 # Run compiled binary
 function runCompiledBinary {
     $exePath = "$OUTPUT_DIR\$BINARY_SERVICE.exe"
-    
+
     if (-not (Test-Path $exePath)) {
         Write-Host "Error: EXE not found: $exePath" -ForegroundColor Red
-        Write-Host "Please build first" -ForegroundColor Yellow
+        Write-Host "Please build first (option 3)" -ForegroundColor Yellow
         return
     }
 
@@ -209,38 +224,38 @@ function runCompiledBinary {
 # Clean artifacts
 function clean {
     Write-Host "Cleaning artifacts..." -ForegroundColor Yellow
-    
+
     go clean
-    
+
     if (Test-Path $OUTPUT_DIR) {
         Remove-Item -Recurse -Force $OUTPUT_DIR
         Write-Host "Removed $OUTPUT_DIR directory" -ForegroundColor Green
     }
-    
+
     Remove-Item -Force rsrc_windows_amd64.syso -ErrorAction SilentlyContinue
     Remove-Item -Force "cmd\blog-vim-ime\app.png" -ErrorAction SilentlyContinue
     Remove-Item -Force "cmd\blog-vim-ime-cli\app.png" -ErrorAction SilentlyContinue
-    
+
     Write-Host "Cleanup complete" -ForegroundColor Green
 }
 
-# Full pipeline
+# Full pipeline (builds service only)
 function fullPipeline {
     Write-Host "Running full pipeline..." -ForegroundColor Yellow
     Write-Host ""
-    
+
     formatCode
     Write-Host ""
-    
+
     goLint
     Write-Host ""
-    
+
     runTests
     Write-Host ""
-    
-    buildWithIcon
+
+    buildService
     Write-Host ""
-    
+
     Write-Host "Full pipeline complete" -ForegroundColor Green
 }
 
@@ -249,11 +264,12 @@ switch ($choice) {
     0 { formatCode }
     1 { goLint }
     2 { runTests }
-    3 { buildWithIcon }
-    4 { buildAndRun }
-    5 { runCompiledBinary }
-    6 { clean }
+    3 { buildService }
+    4 { buildCLI }
+    5 { buildAndRun }
+    6 { runCompiledBinary }
     7 { fullPipeline }
+    8 { clean }
     default { Write-Host "Invalid choice" -ForegroundColor Red }
 }
 
