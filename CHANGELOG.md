@@ -5,6 +5,12 @@
 该格式基于 [Keep a Changelog](https://keepachangelog.com),
 本项目遵循 [语义化版本控制](https://semver.org/spec/v2.0.0.html)。
 
+## [v0.2.0] - 2026-06-15
+
+### ♻️ Refactor
+
+- IME 切换仅由 mode-after 决定，同模式不再返回 204
+
 ## [v0.1.0] - 2026-06-13
 
 ### ♻️ Refactor
