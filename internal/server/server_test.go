@@ -92,7 +92,7 @@ func TestHandleIME_InsertToNormalSwitchesEnglish(t *testing.T) {
 	}
 }
 
-func TestHandleIME_NoTransitionReturnsNoContent(t *testing.T) {
+func TestHandleIME_SameModeNormalSwitchesEnglish(t *testing.T) {
 	t.Parallel()
 
 	mock := &mockController{}
@@ -103,12 +103,32 @@ func TestHandleIME_NoTransitionReturnsNoContent(t *testing.T) {
 
 	s.Routes().ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusNoContent {
-		t.Fatalf("expected 204, got %d", rec.Code)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
 	}
 
-	if mock.calls != 0 {
-		t.Fatalf("expected controller not to be called, got %d", mock.calls)
+	if mock.calls != 1 || mock.lastOpen {
+		t.Fatalf("expected one english switch call")
+	}
+}
+
+func TestHandleIME_SameModeInsertSwitchesChinese(t *testing.T) {
+	t.Parallel()
+
+	mock := &mockController{}
+	s := New(mock, log.New(io.Discard, "", 0))
+
+	req := httptest.NewRequest(http.MethodPost, "/ime", bytes.NewBufferString(`{"mode-before":"insert","mode-after":"insert"}`))
+	rec := httptest.NewRecorder()
+
+	s.Routes().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+
+	if mock.calls != 1 || !mock.lastOpen {
+		t.Fatalf("expected one chinese switch call")
 	}
 }
 

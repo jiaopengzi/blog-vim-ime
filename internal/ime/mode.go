@@ -26,9 +26,9 @@ const (
 	ActionSwitchToChinese
 )
 
-// DetermineAction 根据模式变化计算需要执行的输入法动作.
+// DetermineAction 根据目标模式决定输入法切换动作.
 // modeBefore 和 modeAfter 支持 normal, insert, visual, replace, cmd 等模式.
-// 切换规则: normal 和 visual 模式使用英文输入法; insert, replace, cmd 模式使用中文输入法.
+// modeAfter 为 normal 或 visual 时切换到英文, 为 insert, replace, cmd 时切换到中文.
 // 返回动作枚举; 当模式值不受支持时返回错误.
 func DetermineAction(modeBefore, modeAfter string) (TransitionAction, error) {
 	if !isSupportedMode(modeBefore) {
@@ -39,11 +39,6 @@ func DetermineAction(modeBefore, modeAfter string) (TransitionAction, error) {
 		return ActionNone, fmt.Errorf("unsupported mode-after %q", modeAfter)
 	}
 
-	if modeBefore == modeAfter {
-		return ActionNone, nil
-	}
-
-	// normal 和 visual 模式下切换到英文; 其余模式下切换到中文.
 	if usesEnglishIME(modeAfter) {
 		return ActionSwitchToEnglish, nil
 	}

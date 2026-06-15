@@ -10,6 +10,7 @@
 - ✓ CLI 独立工具用于本地测试
 - ✓ 后台运行，系统托盘显示程序图标，无控制台窗口
 - ✓ 托盘菜单支持快捷退出
+- ✓ 开机自启（托盘菜单复选框控制）
 
 ## 配置端口
 
@@ -29,7 +30,7 @@ go run .\cmd\blog-vim-ime
 
 ### 生产模式（后台运行，系统托盘显示）
 
-直接运行编译后的 EXE 文件，程序启动后在系统托盘显示，点击托盘图标菜单可选择退出：
+直接运行编译后的 EXE 文件，程序启动后在系统托盘显示，点击托盘图标菜单可勾选开机启动或选择退出：
 
 ```powershell
 .\bin\blog-vim-ime.exe
@@ -50,33 +51,41 @@ go run .\cmd\blog-vim-ime
 | 0 | 格式化代码 (go fmt) |
 | 1 | Lint 检查 (golangci-lint) |
 | 2 | 运行单元测试 (go test) |
-| 3 | 编译构建（含图标）|
-| 4 | 编译运行服务 |
-| 5 | 运行已编译的服务 EXE |
-| 6 | 清理编译产物 |
-| 7 | 完整流程（Fmt -> Lint -> Test -> Build）|
+| 3 | 编译 service（blog-vim-ime.exe，含图标）|
+| 4 | 编译 CLI（blog-vim-ime-cli.exe，含图标）|
+| 5 | 编译 service 并运行 |
+| 6 | 运行已编译的 service EXE |
+| 7 | 完整流程（Fmt -> Lint -> Test -> Build service）|
+| 8 | 清理编译产物 |
 
 ### 示例用法
 
-#### 快速开发构建（含图标）
+#### 编译 service（含图标）
 
 ```powershell
 .\run.ps1
-# 选择 3（编译构建含图标）
+# 选择 3（编译 service）
+```
+
+#### 编译 CLI（含图标）
+
+```powershell
+.\run.ps1
+# 选择 4（编译 CLI）
 ```
 
 #### 完整流程构建
 
 ```powershell
 .\run.ps1
-# 选择 7（完整流程）
+# 选择 7（完整流程，仅构建 service）
 ```
 
 #### 编译并运行
 
 ```powershell
 .\run.ps1
-# 选择 5（编译运行服务）
+# 选择 5（编译并运行 service）
 ```
 
 服务启动时会优先读取 EXE 同目录下的 `port.yaml`; 如果同目录不存在, 再回退到当前工作目录中的同名文件.
@@ -99,15 +108,20 @@ go run .\cmd\blog-vim-ime
 
 ```powershell
 .\run.ps1
-# 选择 3（编译构建含图标）
+# 选择 3（编译 service 含图标）
 ```
 
 ### 手动构建（不含图标）
 
 ```powershell
 go build -o .\bin\blog-vim-ime.exe .\cmd\blog-vim-ime
-go build -o .\bin\blog-vim-ime-cli.exe .\cmd\blog-vim-ime-cli
 Copy-Item .\port.yaml .\bin\port.yaml -Force
+```
+
+构建 CLI 独立工具：
+
+```powershell
+go build -o .\bin\blog-vim-ime-cli.exe .\cmd\blog-vim-ime-cli
 ```
 
 ## Lint 校验
@@ -145,12 +159,11 @@ Content-Type: application/json
 
 支持的 Vim 模式：`normal`, `insert`, `visual`, `replace`, `cmd`
 
-切换规则：
+切换规则（仅由 `mode-after` 决定）：
 
-1. 进入 `normal` 模式：切到英文输入法（兜底）。
-2. 进入 `visual` 模式：切到英文输入法。
-3. 进入 `insert`, `replace`, `cmd` 模式：切到中文输入法。
-4. 在同一模式内转换：不做输入法切换（返回 204）。
+1. 目标为 `normal` 或 `visual` 模式：切到英文输入法。
+2. 目标为 `insert`、`replace`、`cmd` 模式：切到中文输入法。
+3. 前后模式相同时同样执行上述规则（例如 `insert→insert` 也会切中文）。
 
 ## 运行测试
 

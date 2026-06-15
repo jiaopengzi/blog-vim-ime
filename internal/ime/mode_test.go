@@ -70,24 +70,36 @@ func TestDetermineAction(t *testing.T) {
 			after:      ModeNormal,
 			wantAction: ActionSwitchToEnglish,
 		},
-		// same mode: no operation
+		// same mode: action determined solely by modeAfter
 		{
-			name:       "normal to normal does nothing",
+			name:       "normal to normal switches english",
 			before:     ModeNormal,
 			after:      ModeNormal,
-			wantAction: ActionNone,
+			wantAction: ActionSwitchToEnglish,
 		},
 		{
-			name:       "insert to insert does nothing",
+			name:       "insert to insert switches chinese",
 			before:     ModeInsert,
 			after:      ModeInsert,
-			wantAction: ActionNone,
+			wantAction: ActionSwitchToChinese,
 		},
 		{
-			name:       "visual to visual does nothing",
+			name:       "visual to visual switches english",
 			before:     ModeVisual,
 			after:      ModeVisual,
-			wantAction: ActionNone,
+			wantAction: ActionSwitchToEnglish,
+		},
+		{
+			name:       "replace to replace switches chinese",
+			before:     ModeReplace,
+			after:      ModeReplace,
+			wantAction: ActionSwitchToChinese,
+		},
+		{
+			name:       "cmd to cmd switches chinese",
+			before:     ModeCmd,
+			after:      ModeCmd,
+			wantAction: ActionSwitchToChinese,
 		},
 		// visual 目标模式使用英文; 其余非 normal 目标模式默认使用中文.
 		{
